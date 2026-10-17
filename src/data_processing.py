@@ -3,33 +3,47 @@ import pandas as pd
 
 
 def load_and_clean_data(file_path: str) -> pd.DataFrame:
-  """Loads raw HR data, removes sensitive PII, and applies quality checks."""
+  """Loads raw HR data, normalizes column names, and drops sensitive fields."""
   df = pd.read_csv(file_path)
 
-  # Drop non-predictive/sensitive fields to protect employee privacy
+  # Standardize naming differences
+  column_renames = {
+      "Years_at_Company": "YearsAtCompany",
+      "Years_in_Current_Role": "YearsInCurrentRole",
+      "Monthly_Income": "MonthlyIncome",
+      "Overtime": "OverTime",
+      "Job_Role": "JobRole",
+      "Work_Life_Balance": "WorkLifeBalance",
+      "Job_Satisfaction": "JobSatisfaction",
+      "Performance_Rating": "PerformanceRating",
+  }
+  df = df.rename(columns=column_renames)
+
+  # Drop direct personal identifiers
   sensitive_cols = [
+      "Employee_ID",
+      "EmployeeID",
       "EmployeeNumber",
       "EmployeeCount",
       "Over18",
       "StandardHours",
       "Name",
+      "EmployeeName",
   ]
   df = df.drop(
       columns=[col for col in sensitive_cols if col in df.columns],
       errors="ignore",
   )
-
-  # Handle missing values
   df = df.dropna().drop_duplicates()
 
   # Standardize target variable
-  if "Attrition" in df.columns and df["Attrition"].dtype == object:
-    df["Attrition_Flag"] = (df["Attrition"].str.strip() == "Yes").astype(int)
-  elif "Attrition" in df.columns:
-    df["Attrition_Flag"] = df["Attrition"].astype(int)
+  if "Attrition" in df.columns:
+    df["Attrition_Flag"] = (
+        df["Attrition"].astype(str).str.strip().str.lower() == "yes"
+    ).astype(int)
 
   # Derived Metrics: Tenure Bands
-  bins = [-1, 1, 3, 5, 10, 40]
+  bins = [-1, 1, 3, 5, 10, 50]
   labels = ["0-1 yrs", "2-3 yrs", "4-5 yrs", "6-10 yrs", "10+ yrs"]
   if "YearsAtCompany" in df.columns:
     df["TenureBand"] = pd.cut(df["YearsAtCompany"], bins=bins, labels=labels)
@@ -45,7 +59,6 @@ def get_preprocessed_features(
   X = df.drop(columns=[col for col in exclude_cols if col in df.columns])
   y = df["Attrition_Flag"]
 
-  # Identify categorical columns for one-hot encoding
   categorical_cols = X.select_dtypes(
       include=["object", "category"]
   ).columns.tolist()

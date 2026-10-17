@@ -7,7 +7,7 @@ import statsmodels.api as sm
 
 
 def run_logistic_regression_stats(X: pd.DataFrame, y: pd.Series):
-  """Fits a statsmodels Logit to identify meaningful predictors and p-values."""
+  """Fits a statsmodels Logit to evaluate odds ratios and p-values."""
   X_const = sm.add_constant(X.astype(float))
   logit_model = sm.Logit(y, X_const)
   try:
@@ -22,13 +22,13 @@ def run_logistic_regression_stats(X: pd.DataFrame, y: pd.Series):
 
 
 def train_attrition_model(X: pd.DataFrame, y: pd.Series):
-  """Trains a Random Forest model with class balancing."""
+  """Trains a Random Forest classifier with balanced weights."""
   X_train, X_test, y_train, y_test = train_test_split(
       X, y, test_size=0.25, random_state=42, stratify=y
   )
 
   model = RandomForestClassifier(
-      n_estimators=150, max_depth=6, class_weight="balanced", random_state=42
+      n_estimators=100, max_depth=6, class_weight="balanced", random_state=42
   )
   model.fit(X_train, y_train)
 
